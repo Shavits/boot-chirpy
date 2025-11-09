@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,8 +18,8 @@ func main(){
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app",http.FileServer(http.Dir(".")))))
 	mux.HandleFunc("GET /api/healthz", handlerHealthz)
-	mux.HandleFunc("GET /api/metrics", apiCfg.handlerHits)
-	mux.HandleFunc("POST /api/reset", apiCfg.handlerReset)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerHits)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	server := &http.Server{
 		Handler: mux,
 		Addr: ":8080",
@@ -41,11 +42,11 @@ func handlerHealthz(resWriter http.ResponseWriter,req *http.Request){
 }
 
 func (apiCfg *apiConfig) handlerHits(resWriter http.ResponseWriter,req *http.Request){
-	resWriter.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	resWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
 	resWriter.WriteHeader(200)
 
 
-    hitsStr := "Hits: " + strconv.Itoa(int(apiCfg.fileserverHits.Load()))
+    hitsStr := fmt.Sprintf("<html><body><h1>Welcome, Chirpy Admin</h1><p>Chirpy has been visited %d times!</p></body></html>", apiCfg.fileserverHits.Load())
     _, err := resWriter.Write([]byte(hitsStr))
     if err != nil {
         log.Println(err)

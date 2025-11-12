@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries *database.Queries
+	platform string
 }
 
 func main() {
@@ -25,13 +26,15 @@ func main() {
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil{
-		log.Fatal("error opening db - %v", err)
+		log.Fatalf("error opening db - %v", err)
 	}
 
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		dbQueries: database.New(db),
+		platform: os.Getenv("PLATFORM"),
 	}
+	log.Printf("platform is %v", apiCfg.platform)
 
 	mux := http.NewServeMux()
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
@@ -42,6 +45,8 @@ func main() {
 
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+
+	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

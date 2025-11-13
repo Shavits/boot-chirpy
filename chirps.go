@@ -89,3 +89,22 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 }
 
 
+func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
+	dbChirps, err := cfg.dbQueries.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create user", err)
+		return
+	}
+	chirps := make([]Chirp, 0, len(dbChirps))
+    for _, c := range dbChirps {
+        chirps = append(chirps, Chirp{
+            ID:        c.ID,
+            CreatedAt: c.CreatedAt,
+            UpdatedAt: c.UpdatedAt,
+            Body:      c.Body,
+            UserId:    c.UserID,
+        })
+    }
+
+    respondWithJSON(w, http.StatusOK, chirps)
+}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shavits/boot-chirpy/internal/auth"
 	"github.com/shavits/boot-chirpy/internal/database"
 )
 
@@ -43,6 +44,18 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	// 	return fmt.Errorf("user %s does not exist", userName)
 	// }
 
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil{
+		respondWithError(w, http.StatusInternalServerError, "Couldn't get Bearer", err)
+		return
+	}
+
+	userMatch, err := auth.ValidateJWT(token, cfg.secret_key)
+	if err != nil{
+		respondWithError(w, http.StatusUnauthorized, "Invalid Token", err)
+		return
+	}
+
 	
 	const maxChirpLength = 140
 	if len(params.Body) > maxChirpLength {
@@ -69,7 +82,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Body: cleanedBody,
-		UserID: params.UserId,
+		UserID: userMatch,
 
 
 	}

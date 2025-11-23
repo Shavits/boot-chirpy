@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,6 +17,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 
@@ -66,6 +68,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email string `json:"email"`
 		Password string `json:"password"`
+		ExpiresInSeconds int `json:"expires_in_seconds"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -93,11 +96,24 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	actualDurationInSeconds := max(params.ExpiresInSeconds, 3600)
+	duraion, err := time.ParseDuration(fmt.Sprintf("%ds",actualDurationInSeconds))
+	if err != nil{
+		respondWithError(w, http.StatusUnauthorized, "Invalid duration for token expiry", err)
+		return
+	}
+	token, err := auth.MakeJWT(user.ID, cfg.secret_key, duraion)
+	if err != nil{
+		respondWithError(w, http.StatusUnauthorized, "Unable to create JWT", err)
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, User{
 		ID: user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email: user.Email,
+		Token: token,
 	})
 
 

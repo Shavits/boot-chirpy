@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries *database.Queries
 	platform string
+	secret_key string
 }
 
 func main() {
@@ -29,10 +30,12 @@ func main() {
 		log.Fatalf("error opening db - %v", err)
 	}
 
+	secret_key := os.Getenv("SECRET_KEY")
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		dbQueries: database.New(db),
 		platform: os.Getenv("PLATFORM"),
+		secret_key: secret_key,
 	}
 	log.Printf("platform is %v", apiCfg.platform)
 

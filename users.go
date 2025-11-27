@@ -17,8 +17,6 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
-	Token     string    `json:"token"`
-	RefreshToken string `json:"refresh_token"`
 }
 
 
@@ -66,6 +64,12 @@ func (cfg *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
 
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
 	type parameters struct {
 		Email string `json:"email"`
 		Password string `json:"password"`
@@ -128,61 +132,71 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Unable to create refreshtoken", err)
 		return
 	}
-	respondWithJSON(w, http.StatusOK, User{
-		ID: user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email: user.Email,
+	respondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
+		},
 		Token: token,
 		RefreshToken: refreshToken,
 	})
 
 }
 
-func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
-	type returnVals struct{
-		Token string `json:"token"`
-	}
-	refreshToken, err := auth.GetBearerToken(r.Header)
-	if err != nil{
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get Bearer", err)
-		return
-	}
-	user, err := cfg.dbQueries.GetUserFromRefreshToken(r.Context(), refreshToken)
-	if err != nil{
-		respondWithError(w, http.StatusUnauthorized, "Invalid refresh token", err)
-		return
+
+func (cfg *apiConfig) handlerUpdateUserDetails(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email string `json:"email"`
+		Password string `json:"password"`
 	}
 
-	accessToken, err := auth.MakeJWT(user.ID, cfg.secret_key, time.Hour)
-	if err != nil{
-		respondWithError(w, http.StatusUnauthorized, "Unable to create JWT", err)
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, returnVals{Token: accessToken})
-
-
-}
-
-
-
-func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
-	refreshToken, err := auth.GetBearerToken(r.Header)
+	token, err := auth.GetBearerToken(r.Header)
 	if err != nil{
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get Bearer", err)
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get Bearer", err)
 		return
 	}
-	err = cfg.dbQueries.RevokeToken(r.Context(), refreshToken)
+
+	userMatch, err := auth.ValidateJWT(token, cfg.secret_key)
 	if err != nil{
-		respondWithError(w, http.StatusInternalServerError, "Unable to revoke token", err)
+		respondWithError(w, http.StatusUnauthorized, "Invalid Token", err)
 		return
 	}
+	hashedPass, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't hash password", err)
+		return
+	} 
+
+
+	updateUserParams := database.UpdateEmailAndPwdByIdParams{
+		ID: userMatch,
+		Email: params.Email,
+		HashedPassword: hashedPass,
+	}
+
+	updatedUser, err := cfg.dbQueries.UpdateEmailAndPwdById(r.Context(), updateUserParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't update user", err)
+		return
+	} 
+
+
+	respondWithJSON(w, http.StatusOK, User{
+		ID: updatedUser.ID,
+		CreatedAt: updatedUser.CreatedAt,
+		UpdatedAt: updatedUser.UpdatedAt,
+		Email: updatedUser.Email,
+	})
+
 	
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusNoContent)
-	w.Write([]byte(http.StatusText(http.StatusNoContent)))
-
-
-
 }

@@ -23,6 +23,14 @@ SET
 WHERE id = $1
 RETURNING *;
 
+-- name: UpgradeToChirpyRedById :one
+UPDATE users
+SET
+    updated_at = now(),
+    is_chirpy_red = true
+WHERE id = $1
+RETURNING *;
+
 
 -- name: ResetUsers :exec
 DELETE FROM users;

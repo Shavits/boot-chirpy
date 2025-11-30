@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -104,17 +105,23 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create user", err)
 		return
 	}
+	author_id := r.URL.Query().Get("author_id")
 	chirps := make([]Chirp, 0, len(dbChirps))
     for _, c := range dbChirps {
-        chirps = append(chirps, Chirp{
-            ID:        c.ID,
-            CreatedAt: c.CreatedAt,
-            UpdatedAt: c.UpdatedAt,
-            Body:      c.Body,
-            UserId:    c.UserID,
-        })
+		if author_id == "" || author_id == string(c.UserID.String()){
+			chirps = append(chirps, Chirp{
+				ID:        c.ID,
+				CreatedAt: c.CreatedAt,
+				UpdatedAt: c.UpdatedAt,
+				Body:      c.Body,
+				UserId:    c.UserID,
+			})
+		}
     }
-
+	sortType := r.URL.Query().Get("sort")
+	if sortType == "desc"{
+		sort.Slice(chirps, func(i,j int) bool {return chirps[j].CreatedAt.Before(chirps[i].CreatedAt)})
+	}
     respondWithJSON(w, http.StatusOK, chirps)
 }
 

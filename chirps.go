@@ -46,7 +46,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userMatch, err := auth.ValidateJWT(token, cfg.secret_key)
+	userMatch, err := auth.ValidateJWT(token, cfg.secretKey)
 	if err != nil{
 		respondWithError(w, http.StatusUnauthorized, "Invalid Token", err)
 		return
@@ -158,7 +158,7 @@ func (cfg *apiConfig) handlerDeleteChirpById(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	userMatch, err := auth.ValidateJWT(token, cfg.secret_key)
+	userMatch, err := auth.ValidateJWT(token, cfg.secretKey)
 	if err != nil{
 		respondWithError(w, http.StatusUnauthorized, "Invalid Token", err)
 		return

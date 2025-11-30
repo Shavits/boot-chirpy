@@ -109,7 +109,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	// 	respondWithError(w, http.StatusUnauthorized, "Invalid duration for token expiry", err)
 	// 	return
 	// }
-	token, err := auth.MakeJWT(user.ID, cfg.secret_key, time.Hour)
+	token, err := auth.MakeJWT(user.ID, cfg.secretKey, time.Hour)
 	if err != nil{
 		respondWithError(w, http.StatusUnauthorized, "Unable to create JWT", err)
 		return
@@ -169,7 +169,7 @@ func (cfg *apiConfig) handlerUpdateUserDetails(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	userMatch, err := auth.ValidateJWT(token, cfg.secret_key)
+	userMatch, err := auth.ValidateJWT(token, cfg.secretKey)
 	if err != nil{
 		respondWithError(w, http.StatusUnauthorized, "Invalid Token", err)
 		return

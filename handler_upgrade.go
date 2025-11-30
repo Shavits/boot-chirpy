@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/shavits/boot-chirpy/internal/auth"
 )
 
 const UPGRADED_EVENT string = "user.upgraded"
@@ -18,9 +19,20 @@ func (cfg *apiConfig) handlerUgradeUser(w http.ResponseWriter, r *http.Request) 
 		} `json:"data"`
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil{
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get apiKey", err)
+		return
+	}
+
+	if apiKey != cfg.polkaKey{
+		respondWithError(w, http.StatusUnauthorized, "Invalid API key", err)
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
@@ -37,7 +49,7 @@ func (cfg *apiConfig) handlerUgradeUser(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	
+
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte(http.StatusText(http.StatusNoContent)))

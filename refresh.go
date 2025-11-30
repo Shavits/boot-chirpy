@@ -22,7 +22,7 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := auth.MakeJWT(user.ID, cfg.secret_key, time.Hour)
+	accessToken, err := auth.MakeJWT(user.ID, cfg.secretKey, time.Hour)
 	if err != nil{
 		respondWithError(w, http.StatusUnauthorized, "Unable to create JWT", err)
 		return
